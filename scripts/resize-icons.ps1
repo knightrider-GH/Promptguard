@@ -1,7 +1,8 @@
 Add-Type -AssemblyName System.Drawing
 
-$srcPath = "C:\Users\archi\.gemini\antigravity-ide\brain\f8598bd0-d078-46a8-9c7a-da8fd372943a\.user_uploaded\media_1792600319635.png"
-$destDir = "c:\Users\archi\Desktop\Promptguard\icons"
+$baseDir = Split-Path -Parent $PSScriptRoot
+$destDir = Join-Path $baseDir "icons"
+$srcPath = Join-Path $destDir "icon-original.png"
 
 if (-not (Test-Path $destDir)) {
     New-Item -ItemType Directory -Path $destDir -Force | Out-Null

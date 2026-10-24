@@ -109,8 +109,7 @@ The compiled, production-ready extension will be output to the `dist/` directory
    - Brave: `brave://extensions`
 2. Enable **Developer mode** (toggle switch in the top-right corner).
 3. Click **Load unpacked**.
-4. Select the `dist/` directory inside this project:  
-   `C:\Users\archi\Desktop\Promptguard\dist`
+4. Select the `dist/` directory inside this repository (e.g., `<path-to-promptguard>/dist`).
 5. PromptGuard is now active! The shield icon will appear in your browser toolbar.
 
 ---

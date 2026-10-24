@@ -125,7 +125,9 @@ describe('API key detection', () => {
   });
 
   it('detects a Stripe test API key', () => {
-    const result = scan('const stripe = require("stripe")("sk_test_abcdefghijklmnopqrstuvwx");');
+    // Construct dummy key at runtime to prevent static scanner false positives
+    const dummyStripeKey = ['sk', 'test', 'fakekey00000000000000000000'].join('_');
+    const result = scan(`const stripe = require("stripe")("${dummyStripeKey}");`);
     const keys = result.detections.filter((d) => d.category === 'api_key');
     expect(keys.length).toBeGreaterThanOrEqual(1);
     expect(keys[0].severity).toBe('critical');
