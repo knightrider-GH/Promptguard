@@ -1,9 +1,11 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   Shield, ShieldOff, ShieldCheck, Settings, RefreshCw,
-  Eye, EyeOff, AlertTriangle, CheckCircle, Info, ChevronDown,
-  ChevronUp, Lock, Zap, Globe, ToggleLeft, ToggleRight,
-  Activity, X
+  AlertTriangle, CheckCircle, Info, Lock, Zap, Globe,
+  ToggleLeft, ToggleRight, Activity, X, Mail, Phone,
+  Key, Database, FileKey, Cpu, Hash, CreditCard, Fingerprint,
+  MapPin, Calendar, Bitcoin, Terminal, Network, User, Building,
+  Wallet, IdCard, Server
 } from 'lucide-react';
 import type { ExtensionSettings, SessionStats } from '../types';
 import { DEFAULT_SETTINGS } from '../types';
@@ -12,37 +14,176 @@ import styles from './App.module.css';
 type Tab = 'main' | 'settings' | 'privacy';
 
 const SITE_CONFIG = [
-  { id: 'chatgpt.com', name: 'ChatGPT', hostname: 'chatgpt.com', icon: '🤖' },
-  { id: 'claude.ai', name: 'Claude', hostname: 'claude.ai', icon: '🧠' },
-  { id: 'gemini.google.com', name: 'Google Gemini', hostname: 'gemini.google.com', icon: '✨' },
-  { id: 'copilot.microsoft.com', name: 'Microsoft Copilot', hostname: 'copilot.microsoft.com', icon: '💠' },
+  { id: 'chatgpt.com', name: 'ChatGPT', hostname: 'chatgpt.com', icon: '🤖', colorKey: 'chatgpt', activeColor: '#059669' },
+  { id: 'claude.ai', name: 'Claude', hostname: 'claude.ai', icon: '🧠', colorKey: 'claude', activeColor: '#ea580c' },
+  { id: 'gemini.google.com', name: 'Google Gemini', hostname: 'gemini.google.com', icon: '✨', colorKey: 'gemini', activeColor: '#2563eb' },
+  { id: 'copilot.microsoft.com', name: 'Microsoft Copilot', hostname: 'copilot.microsoft.com', icon: '💠', colorKey: 'copilot', activeColor: '#0284c7' },
 ];
 
-const CATEGORY_LABELS: Record<string, string> = {
-  email: 'Email Addresses',
-  phone: 'Phone Numbers',
-  api_key: 'API Keys',
-  password: 'Passwords & Secrets',
-  access_token: 'Access Tokens',
-  auth_header: 'Auth Headers',
-  database_credentials: 'Database Credentials',
-  private_key: 'Private Keys',
-  jwt: 'JWT Tokens',
-  high_entropy: 'High-Entropy Strings (Beta)',
+// ── Category metadata ───────────────────────────────────────────────────────
+
+interface CategoryMeta {
+  label: string;
+  severity: string;
+  group: 'credentials' | 'pii' | 'advanced';
+  icon: React.ReactNode;
+  description: string;
+}
+
+const CATEGORIES: Record<string, CategoryMeta> = {
+  // Credentials group
+  api_key: {
+    label: 'API Keys',
+    severity: 'critical',
+    group: 'credentials',
+    icon: <Key size={13} />,
+    description: 'OpenAI, GitHub, AWS, Google, Stripe…',
+  },
+  private_key: {
+    label: 'Private Keys (PEM)',
+    severity: 'critical',
+    group: 'credentials',
+    icon: <FileKey size={13} />,
+    description: 'RSA, EC, DSA cryptographic keys',
+  },
+  ssh_key: {
+    label: 'SSH Keys',
+    severity: 'critical',
+    group: 'credentials',
+    icon: <Terminal size={13} />,
+    description: 'SSH private and public key blocks',
+  },
+  auth_header: {
+    label: 'Auth Headers',
+    severity: 'critical',
+    group: 'credentials',
+    icon: <Shield size={13} />,
+    description: 'Bearer tokens, Basic auth headers',
+  },
+  database_credentials: {
+    label: 'Database Credentials',
+    severity: 'critical',
+    group: 'credentials',
+    icon: <Database size={13} />,
+    description: 'PostgreSQL, MySQL, MongoDB, Redis URIs',
+  },
+  password: {
+    label: 'Passwords & Secrets',
+    severity: 'high',
+    group: 'credentials',
+    icon: <Lock size={13} />,
+    description: 'Password/secret variable assignments',
+  },
+  access_token: {
+    label: 'Access Tokens',
+    severity: 'high',
+    group: 'credentials',
+    icon: <Zap size={13} />,
+    description: 'OAuth & session token assignments',
+  },
+  jwt: {
+    label: 'JWT Tokens',
+    severity: 'high',
+    group: 'credentials',
+    icon: <Cpu size={13} />,
+    description: 'JSON Web Tokens (eyJ… format)',
+  },
+  crypto_wallet: {
+    label: 'Crypto Wallet Addresses',
+    severity: 'high',
+    group: 'credentials',
+    icon: <Wallet size={13} />,
+    description: 'Bitcoin and Ethereum wallet addresses',
+  },
+
+  // PII group
+  ssn: {
+    label: 'Social Security Numbers',
+    severity: 'critical',
+    group: 'pii',
+    icon: <IdCard size={13} />,
+    description: 'US SSN (xxx-xx-xxxx format)',
+  },
+  credit_card: {
+    label: 'Credit / Debit Cards',
+    severity: 'critical',
+    group: 'pii',
+    icon: <CreditCard size={13} />,
+    description: 'Visa, Mastercard, Amex, Discover…',
+  },
+  national_id: {
+    label: 'National IDs',
+    severity: 'high',
+    group: 'pii',
+    icon: <Fingerprint size={13} />,
+    description: 'Aadhaar, PAN, passport numbers',
+  },
+  iban: {
+    label: 'Bank Accounts (IBAN)',
+    severity: 'high',
+    group: 'pii',
+    icon: <Building size={13} />,
+    description: 'International bank account numbers',
+  },
+  email: {
+    label: 'Email Addresses',
+    severity: 'medium',
+    group: 'pii',
+    icon: <Mail size={13} />,
+    description: 'Any email address pattern',
+  },
+  phone: {
+    label: 'Phone Numbers',
+    severity: 'medium',
+    group: 'pii',
+    icon: <Phone size={13} />,
+    description: 'International phone number formats',
+  },
+  date_of_birth: {
+    label: 'Date of Birth',
+    severity: 'medium',
+    group: 'pii',
+    icon: <Calendar size={13} />,
+    description: 'DOB keyword followed by a date',
+  },
+  physical_address: {
+    label: 'Physical Addresses',
+    severity: 'medium',
+    group: 'pii',
+    icon: <MapPin size={13} />,
+    description: 'Street/mailing address patterns',
+  },
+
+  // Advanced / Heuristic group
+  ip_address: {
+    label: 'Private IP Addresses',
+    severity: 'low',
+    group: 'advanced',
+    icon: <Network size={13} />,
+    description: '192.168.x.x, 10.x.x.x, 172.16-31.x.x',
+  },
+  high_entropy: {
+    label: 'High-Entropy Strings',
+    severity: 'low',
+    group: 'advanced',
+    icon: <Hash size={13} />,
+    description: 'Heuristic — may have false positives',
+  },
 };
 
-const CATEGORY_SEVERITY: Record<string, string> = {
-  email: 'medium',
-  phone: 'medium',
-  api_key: 'critical',
-  password: 'high',
-  access_token: 'high',
-  auth_header: 'critical',
-  database_credentials: 'critical',
-  private_key: 'critical',
-  jwt: 'high',
-  high_entropy: 'low',
+const GROUP_LABELS: Record<string, string> = {
+  credentials: '🔑 Credentials & Tokens',
+  pii: '👤 Personal Information (PII)',
+  advanced: '🔬 Advanced Heuristics',
 };
+
+const GROUP_COLORS: Record<string, string> = {
+  credentials: 'credentials',
+  pii: 'pii',
+  advanced: 'advanced',
+};
+
+// ── Messaging ───────────────────────────────────────────────────────────────
 
 function sendMessage(type: string, payload?: unknown): Promise<unknown> {
   return new Promise((resolve) => {
@@ -52,6 +193,8 @@ function sendMessage(type: string, payload?: unknown): Promise<unknown> {
   });
 }
 
+// ── Root App ─────────────────────────────────────────────────────────────────
+
 export function App() {
   const [settings, setSettings] = useState<ExtensionSettings>(DEFAULT_SETTINGS);
   const [stats, setStats] = useState<SessionStats>({
@@ -60,12 +203,10 @@ export function App() {
   const [activeTab, setActiveTab] = useState<Tab>('main');
   const [currentSite, setCurrentSite] = useState<{ hostname: string; isSupported: boolean } | null>(null);
   const [loading, setLoading] = useState(true);
-  const [settingsExpanded, setSettingsExpanded] = useState<Record<string, boolean>>({});
   const [saving, setSaving] = useState(false);
   const [resetConfirm, setResetConfirm] = useState(false);
   const [genericPermissionState, setGenericPermissionState] = useState<'idle' | 'requesting' | 'granted' | 'denied'>('idle');
 
-  // Load settings and stats
   const reload = useCallback(async () => {
     const [settingsRes, statsRes] = await Promise.all([
       sendMessage('GET_SETTINGS') as Promise<{ success: boolean; data: ExtensionSettings }>,
@@ -75,7 +216,6 @@ export function App() {
     if (statsRes?.success) setStats(statsRes.data);
   }, []);
 
-  // Detect current site
   useEffect(() => {
     chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
       const url = tabs[0]?.url;
@@ -188,8 +328,8 @@ export function App() {
             aria-label={settings.protectionEnabled ? 'Disable PromptGuard protection' : 'Enable PromptGuard protection'}
           >
             {settings.protectionEnabled
-              ? <ToggleRight size={28} color="#6366f1" />
-              : <ToggleLeft size={28} color="#475569" />
+              ? <ToggleRight size={30} color="#a5f3c8" />
+              : <ToggleLeft size={30} color="rgba(255,255,255,0.35)" />
             }
           </button>
         </div>
@@ -211,9 +351,9 @@ export function App() {
             </div>
             {currentSite && (
               <div className={styles.statusSite}>
-                {protectionStatus === 'active' && 'Monitoring compatible submissions'}
+                {protectionStatus === 'active' && 'Monitoring sensitive data in submissions'}
                 {protectionStatus === 'off' && 'Enable the toggle to activate'}
-                {protectionStatus === 'generic' && 'Using generic adapter (not fully verified)'}
+                {protectionStatus === 'generic' && 'Using generic adapter — not fully verified'}
                 {protectionStatus === 'unsupported' && currentSite.hostname}
               </div>
             )}
@@ -303,13 +443,13 @@ function MainTab({ stats, settings, currentSite, siteConfig, onToggleSite, onRes
         <div className={styles.sectionHeader}>
           <span className={styles.sectionTitle}>Session Statistics</span>
           <button className={styles.resetBtn} onClick={onResetSession} title="Reset session counters">
-            <RefreshCw size={12} /> Reset
+            <RefreshCw size={11} /> Reset
           </button>
         </div>
         <div className={styles.statsGrid}>
           <StatCard value={stats.scans} label="Scans" icon={<Zap size={14} />} color="blue" />
           <StatCard value={stats.warnings} label="Warnings" icon={<AlertTriangle size={14} />} color="amber" />
-          <StatCard value={stats.redactions} label="Redactions" icon={<ShieldCheck size={14} />} color="green" />
+          <StatCard value={stats.redactions} label="Redacted" icon={<ShieldCheck size={14} />} color="green" />
           <StatCard value={stats.cancellations} label="Cancelled" icon={<X size={14} />} color="slate" />
         </div>
       </section>
@@ -318,12 +458,12 @@ function MainTab({ stats, settings, currentSite, siteConfig, onToggleSite, onRes
       {isUnknownSite && settings.protectionEnabled && (
         <section className={styles.section}>
           <div className={styles.enableSiteCard}>
-            <div className={styles.enableSiteIcon}><Globe size={20} /></div>
+            <div className={styles.enableSiteIcon}><Globe size={18} /></div>
             <div className={styles.enableSiteText}>
               <div className={styles.enableSiteTitle}>Enable on this website?</div>
               <div className={styles.enableSiteDesc}>
                 <strong>{currentSite!.hostname}</strong> is not in the built-in list.
-                You can try the generic adapter — it uses heuristics and may not intercept all submissions.
+                Try the generic adapter — it uses heuristics and may not intercept all submissions.
               </div>
             </div>
             <button
@@ -333,7 +473,7 @@ function MainTab({ stats, settings, currentSite, siteConfig, onToggleSite, onRes
             >
               {genericState === 'idle' && 'Enable'}
               {genericState === 'requesting' && 'Requesting…'}
-              {genericState === 'granted' && <><CheckCircle size={14} /> Granted</>}
+              {genericState === 'granted' && <><CheckCircle size={13} /> Granted</>}
               {genericState === 'denied' && 'Denied'}
             </button>
           </div>
@@ -352,23 +492,28 @@ function MainTab({ stats, settings, currentSite, siteConfig, onToggleSite, onRes
                 key={site.id}
                 className={`${styles.siteItem} ${isCurrent ? styles.siteItemCurrent : ''}`}
               >
-                <span className={styles.siteIcon}>{site.icon}</span>
+                <div className={`${styles.siteIconBox} ${styles[`siteIconBox_${site.colorKey}`]}`}>
+                  {site.icon}
+                </div>
                 <div className={styles.siteInfo}>
                   <div className={styles.siteName}>{site.name}</div>
                   <div className={styles.siteStatus}>
                     {isEnabled && settings.protectionEnabled
-                      ? <><span className={styles.dotGreen} />Active</>
+                      ? <><span className={styles.dotGreen} /><span style={{ color: site.activeColor, fontWeight: 600 }}>Active</span></>
                       : <><span className={styles.dotGray} />Disabled</>
                     }
                     {isCurrent && <span className={styles.currentBadge}>Current</span>}
                   </div>
                 </div>
                 <button
-                  className={`${styles.siteToggle} ${isEnabled ? styles.siteToggleOn : ''}`}
+                  className={`${styles.siteToggle} ${isEnabled ? styles.siteToggleOn : styles.siteToggleOff}`}
                   onClick={() => onToggleSite(site.hostname)}
                   aria-label={`${isEnabled ? 'Disable' : 'Enable'} protection on ${site.name}`}
                 >
-                  {isEnabled ? <ToggleRight size={22} /> : <ToggleLeft size={22} />}
+                  {isEnabled
+                    ? <ToggleRight size={22} color={site.activeColor} />
+                    : <ToggleLeft size={22} color="#d1d5db" />
+                  }
                 </button>
               </div>
             );
@@ -396,11 +541,13 @@ function SettingsTab({ settings, onToggleCategory, onSaveSettings }: {
   onToggleCategory: (cat: string) => void;
   onSaveSettings: (patch: Partial<ExtensionSettings>) => Promise<void>;
 }) {
+  const groups: Array<'credentials' | 'pii' | 'advanced'> = ['credentials', 'pii', 'advanced'];
+
   return (
     <div className={styles.tabContent}>
       {/* Sensitivity */}
       <section className={styles.section}>
-        <div className={styles.sectionTitle}>Sensitivity</div>
+        <div className={styles.sectionTitle}>Sensitivity Mode</div>
         <div className={styles.sensitivityOptions}>
           {(['balanced', 'strict'] as const).map((mode) => (
             <button
@@ -410,7 +557,9 @@ function SettingsTab({ settings, onToggleCategory, onSaveSettings }: {
                 detection: { ...settings.detection, sensitivity: mode },
               })}
             >
-              <span className={styles.sensitivityLabel}>{mode === 'balanced' ? '⚖️ Balanced' : '🔒 Strict'}</span>
+              <span className={styles.sensitivityLabel}>
+                {mode === 'balanced' ? <><Zap size={12} /> Balanced</> : <><Lock size={12} /> Strict</>}
+              </span>
               <span className={styles.sensitivityDesc}>
                 {mode === 'balanced' ? 'Stable patterns + conservative heuristics' : 'More heuristics, may have false positives'}
               </span>
@@ -419,45 +568,62 @@ function SettingsTab({ settings, onToggleCategory, onSaveSettings }: {
         </div>
       </section>
 
-      {/* Detection Categories */}
-      <section className={styles.section}>
-        <div className={styles.sectionTitle}>Detection Categories</div>
-        <div className={styles.categoryList}>
-          {Object.entries(CATEGORY_LABELS).map(([cat, label]) => {
-            const enabled = settings.detection.categories[cat as keyof typeof settings.detection.categories];
-            const sev = CATEGORY_SEVERITY[cat] ?? 'low';
-            return (
-              <div key={cat} className={styles.categoryItem}>
-                <div className={styles.categoryLeft}>
-                  <div className={styles.categoryLabel}>{label}</div>
-                  <div className={`${styles.categoryBadge} ${styles[`badge_${sev}`]}`}>
-                    {sev}
+      {/* Detection Categories — grouped */}
+      {groups.map((group) => {
+        const cats = Object.entries(CATEGORIES).filter(([, m]) => m.group === group);
+        return (
+          <section key={group} className={styles.section}>
+            <div className={`${styles.categoryGroupHeader} ${styles[`categoryGroupHeader_${group}`]}`}>
+              <span className={styles.categoryGroupTitle}>{GROUP_LABELS[group]}</span>
+            </div>
+            <div className={styles.categoryList}>
+              {cats.map(([cat, meta]) => {
+                const enabled = settings.detection.categories[cat as keyof typeof settings.detection.categories];
+                return (
+                  <div
+                    key={cat}
+                    className={styles.categoryItem}
+                    data-severity={meta.severity}
+                  >
+                    <div className={styles.categoryLeft}>
+                      <div className={styles.categoryLabelRow}>
+                        <span className={styles.categoryIcon}>{meta.icon}</span>
+                        <span className={styles.categoryLabel}>{meta.label}</span>
+                        <span className={`${styles.categoryBadge} ${styles[`badge_${meta.severity}`]}`}>
+                          {meta.severity}
+                        </span>
+                      </div>
+                      <div className={styles.categoryDesc}>{meta.description}</div>
+                    </div>
+                    <button
+                      className={styles.toggle}
+                      onClick={() => onToggleCategory(cat)}
+                      aria-label={`${enabled ? 'Disable' : 'Enable'} detection for ${meta.label}`}
+                      aria-pressed={enabled}
+                    >
+                      {enabled
+                        ? <ToggleRight size={24} color="#5b5ef6" />
+                        : <ToggleLeft size={24} color="#d1d5db" />
+                      }
+                    </button>
                   </div>
-                </div>
-                <button
-                  className={styles.toggle}
-                  onClick={() => onToggleCategory(cat)}
-                  aria-label={`${enabled ? 'Disable' : 'Enable'} detection for ${label}`}
-                  aria-pressed={enabled}
-                >
-                  {enabled
-                    ? <ToggleRight size={24} color="#6366f1" />
-                    : <ToggleLeft size={24} color="#475569" />
-                  }
-                </button>
-              </div>
-            );
-          })}
-        </div>
-      </section>
+                );
+              })}
+            </div>
+          </section>
+        );
+      })}
 
       {/* Warning Behavior */}
       <section className={styles.section}>
         <div className={styles.sectionTitle}>Warning Behavior</div>
         <div className={styles.categoryList}>
-          <div className={styles.categoryItem}>
+          <div className={styles.categoryItem} data-severity="">
             <div className={styles.categoryLeft}>
-              <div className={styles.categoryLabel}>Auto-select all findings for redaction</div>
+              <div className={styles.categoryLabelRow}>
+                <span className={styles.categoryIcon}><CheckCircle size={13} /></span>
+                <span className={styles.categoryLabel}>Auto-select all findings</span>
+              </div>
               <div className={styles.categoryDesc}>Pre-check all findings in the warning dialog</div>
             </div>
             <button
@@ -473,7 +639,7 @@ function SettingsTab({ settings, onToggleCategory, onSaveSettings }: {
             >
               {settings.warningBehavior.autoSelectAllForRedaction
                 ? <ToggleRight size={24} color="#6366f1" />
-                : <ToggleLeft size={24} color="#475569" />
+                : <ToggleLeft size={24} color="#94a3b8" />
               }
             </button>
           </div>
@@ -487,18 +653,54 @@ function SettingsTab({ settings, onToggleCategory, onSaveSettings }: {
 
 function PrivacyTab() {
   const items = [
-    { icon: '🔒', title: 'Local-only scanning', desc: 'All detection runs inside your browser. Your prompt text is never sent to PromptGuard servers.' },
-    { icon: '🚫', title: 'No prompt storage', desc: 'PromptGuard does not write your prompts to browser storage, cookies, or any database.' },
-    { icon: '🧹', title: 'No telemetry', desc: 'No analytics, tracking, or telemetry. Session counters contain only numbers, not content.' },
-    { icon: '🌐', title: 'AI provider independence', desc: 'Whatever you submit through an AI website is governed by that provider\'s privacy policy. PromptGuard cannot control their data handling.' },
-    { icon: '📋', title: 'Limited permissions', desc: 'PromptGuard requests only the minimum permissions needed. Generic site access requires your explicit consent.' },
-    { icon: '⚠️', title: 'Honest limitations', desc: 'PromptGuard cannot detect every possible secret or guarantee zero false positives. Pattern matching is not proof of real credential validity.' },
+    {
+      icon: <Lock size={16} color="#6366f1" />,
+      bg: 'rgba(99,102,241,0.1)',
+      title: 'Local-only scanning',
+      desc: 'All detection runs inside your browser. Your prompt text is never sent to PromptGuard servers.',
+    },
+    {
+      icon: <ShieldCheck size={16} color="#10b981" />,
+      bg: 'rgba(16,185,129,0.1)',
+      title: 'No prompt storage',
+      desc: 'PromptGuard does not write your prompts to browser storage, cookies, or any database.',
+    },
+    {
+      icon: <Activity size={16} color="#3b82f6" />,
+      bg: 'rgba(59,130,246,0.1)',
+      title: 'No telemetry',
+      desc: 'No analytics, tracking, or telemetry. Session counters contain only numbers, not content.',
+    },
+    {
+      icon: <Globe size={16} color="#f59e0b" />,
+      bg: 'rgba(245,158,11,0.1)',
+      title: 'AI provider independence',
+      desc: 'Whatever you submit through an AI website is governed by that provider\'s privacy policy. PromptGuard cannot control their data handling.',
+    },
+    {
+      icon: <Key size={16} color="#8b5cf6" />,
+      bg: 'rgba(139,92,246,0.1)',
+      title: 'Minimal permissions',
+      desc: 'PromptGuard requests only the minimum permissions needed. Generic site access requires your explicit consent each time.',
+    },
+    {
+      icon: <AlertTriangle size={16} color="#ef4444" />,
+      bg: 'rgba(239,68,68,0.1)',
+      title: 'Honest limitations',
+      desc: 'PromptGuard cannot detect every possible secret or guarantee zero false positives. Pattern matching is not proof of real credential validity.',
+    },
+    {
+      icon: <Fingerprint size={16} color="#06b6d4" />,
+      bg: 'rgba(6,182,212,0.1)',
+      title: 'PII detection scope',
+      desc: 'Detection covers 19+ sensitive data types including credentials, PII, financial data, and government IDs — all processed locally.',
+    },
   ];
 
   return (
     <div className={styles.tabContent}>
       <div className={styles.privacyHeader}>
-        <Lock size={20} color="#6366f1" />
+        <Lock size={18} color="#6366f1" />
         <h3 className={styles.privacyTitle}>Privacy Statement</h3>
       </div>
       <p className={styles.privacyIntro}>
@@ -507,7 +709,9 @@ function PrivacyTab() {
       <div className={styles.privacyList}>
         {items.map((item, i) => (
           <div key={i} className={styles.privacyItem}>
-            <span className={styles.privacyItemIcon}>{item.icon}</span>
+            <div className={styles.privacyItemIconBox} style={{ background: item.bg }}>
+              {item.icon}
+            </div>
             <div>
               <div className={styles.privacyItemTitle}>{item.title}</div>
               <div className={styles.privacyItemDesc}>{item.desc}</div>

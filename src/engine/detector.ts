@@ -354,6 +354,176 @@ const RULES: Rule[] = [
     recommendation: 'Consider whether sharing this phone number is necessary.',
     getMasked: (m) => m.slice(0, 3) + '•'.repeat(4) + m.slice(-2),
   },
+
+  // === SOCIAL SECURITY NUMBER ===
+  {
+    id: 'ssn_us',
+    category: 'ssn',
+    label: 'Social Security Number (SSN)',
+    severity: 'critical',
+    confidence: 0.92,
+    pattern: /(?<![\w\d])(?!000|666|9\d{2})\d{3}[-\s](?!00)\d{2}[-\s](?!0000)\d{4}(?![\w\d])/g,
+    explanation: 'A US Social Security Number (SSN) was detected. This is highly sensitive government-issued identity information.',
+    recommendation: 'Never share your SSN with AI systems. Remove it before sending.',
+    getMasked: (m) => '•••-••-' + m.replace(/[\s\-]/g, '').slice(-4),
+  },
+
+  // === CREDIT CARD NUMBERS ===
+  {
+    id: 'credit_card_visa',
+    category: 'credit_card',
+    label: 'Credit / Debit Card Number',
+    severity: 'critical',
+    confidence: 0.93,
+    pattern: /(?<!\d)(?:4\d{3}|5[1-5]\d{2}|3[47]\d{2}|6(?:011|5\d{2})|35\d{3}|3(?:0[0-5]|[68]\d)\d)[\s\-]?\d{4}[\s\-]?\d{4}[\s\-]?\d{3,4}(?!\d)/g,
+    explanation: 'A credit or debit card number (Visa, Mastercard, Amex, Discover, or JCB) was detected.',
+    recommendation: 'Never share full card numbers with AI systems. Remove it before sending.',
+    getMasked: (m) => {
+      const digits = m.replace(/[\s\-]/g, '');
+      return '•••• •••• •••• ' + digits.slice(-4);
+    },
+  },
+
+  // === IBAN (Bank Account) ===
+  {
+    id: 'iban_number',
+    category: 'iban',
+    label: 'IBAN Bank Account Number',
+    severity: 'high',
+    confidence: 0.88,
+    pattern: /\b[A-Z]{2}\d{2}[\s]?(?:[A-Z0-9]{4}[\s]?){3,6}[A-Z0-9]{1,4}\b/g,
+    explanation: 'An IBAN (International Bank Account Number) was detected. This identifies a specific bank account.',
+    recommendation: 'Do not share your IBAN with AI systems unless absolutely necessary.',
+    getMasked: (m) => m.slice(0, 4) + ' •••• •••• ' + m.replace(/\s/g, '').slice(-4),
+  },
+
+  // === DATE OF BIRTH ===
+  {
+    id: 'date_of_birth',
+    category: 'date_of_birth',
+    label: 'Date of Birth',
+    severity: 'medium',
+    confidence: 0.72,
+    pattern: /(?:(?:dob|date[\s_]?of[\s_]?birth|born[\s_]?on|birth[\s_]?date)\s*[=:\/]?\s*)(?:\d{1,2}[\-\/\.]\d{1,2}[\-\/\.]\d{2,4}|\d{4}[\-\/\.]\d{1,2}[\-\/\.]\d{1,2})/gi,
+    explanation: 'A date of birth was detected. This is sensitive personal identifying information.',
+    recommendation: 'Avoid sharing your date of birth with AI systems.',
+    getMasked: () => '••/••/••••',
+  },
+
+  // === NATIONAL ID (Aadhaar, PAN, etc.) ===
+  {
+    id: 'aadhaar_id',
+    category: 'national_id',
+    label: 'Aadhaar Number (India)',
+    severity: 'critical',
+    confidence: 0.88,
+    pattern: /(?<![\w\d-])[2-9]\d{3}[\s]\d{4}[\s]\d{4}(?![\w\d-])/g,
+    explanation: 'An Aadhaar-format 12-digit ID number was detected. This is a sensitive Indian government identity document.',
+    recommendation: 'Never share your Aadhaar number with AI systems.',
+    getMasked: (m) => '•••• •••• ' + m.replace(/\s/g, '').slice(-4),
+  },
+  {
+    id: 'pan_india',
+    category: 'national_id',
+    label: 'PAN Card Number (India)',
+    severity: 'high',
+    confidence: 0.91,
+    pattern: /\b[A-Z]{5}\d{4}[A-Z]\b/g,
+    explanation: 'An Indian PAN (Permanent Account Number) was detected.',
+    recommendation: 'Do not share your PAN card number with AI systems.',
+    getMasked: (m) => m.slice(0, 2) + '•••••••' + m.slice(-1),
+  },
+  {
+    id: 'passport_generic',
+    category: 'national_id',
+    label: 'Passport Number',
+    severity: 'high',
+    confidence: 0.78,
+    pattern: /(?:passport[\s_]?(?:no|num|number)?[:\s#]*)[A-Z]{1,2}\d{7,9}\b/gi,
+    explanation: 'A passport number was detected. This is sensitive government-issued identity information.',
+    recommendation: 'Never share your passport number with AI systems.',
+    getMasked: (m) => {
+      const parts = m.split(/[:\s#]+/);
+      return parts.slice(0, -1).join(' ') + ' ' + '•'.repeat(8);
+    },
+  },
+
+  // === CRYPTO WALLET ===
+  {
+    id: 'bitcoin_address',
+    category: 'crypto_wallet',
+    label: 'Bitcoin Wallet Address',
+    severity: 'high',
+    confidence: 0.90,
+    pattern: /\b(?:bc1[a-z0-9]{25,87}|[13][a-km-zA-HJ-NP-Z1-9]{25,34})\b/g,
+    explanation: 'A Bitcoin wallet address was detected.',
+    recommendation: 'Be cautious sharing wallet addresses — it exposes your financial identity.',
+    getMasked: (m) => m.slice(0, 6) + '•'.repeat(10) + m.slice(-4),
+  },
+  {
+    id: 'ethereum_address',
+    category: 'crypto_wallet',
+    label: 'Ethereum Wallet Address',
+    severity: 'high',
+    confidence: 0.93,
+    pattern: /\b0x[a-fA-F0-9]{40}\b/g,
+    explanation: 'An Ethereum wallet address was detected.',
+    recommendation: 'Be cautious sharing wallet addresses — it exposes your financial identity.',
+    getMasked: (m) => '0x' + '•'.repeat(8) + m.slice(-6),
+  },
+
+  // === SSH KEYS ===
+  {
+    id: 'ssh_private_key',
+    category: 'ssh_key',
+    label: 'SSH Private Key',
+    severity: 'critical',
+    confidence: 0.99,
+    pattern: /-----BEGIN (?:OPENSSH|RSA|DSA|EC|ED25519) PRIVATE KEY-----[\s\S]+?-----END (?:OPENSSH|RSA|DSA|EC|ED25519) PRIVATE KEY-----/gi,
+    explanation: 'An SSH private key was detected. This grants unauthorized access to servers.',
+    recommendation: 'Never share SSH private keys. Remove immediately before sending.',
+    getMasked: () => '[SSH PRIVATE KEY BLOCK — REDACTED]',
+  },
+  {
+    id: 'ssh_public_key',
+    category: 'ssh_key',
+    label: 'SSH Public Key',
+    severity: 'medium',
+    confidence: 0.85,
+    pattern: /\bssh-(?:rsa|ed25519|ecdsa|dss)\s+[A-Za-z0-9+\/=]{40,}\s*(?:\S+@\S+)?\b/g,
+    explanation: 'An SSH public key was detected. While less sensitive, it reveals your server access fingerprint.',
+    recommendation: 'Consider if sharing your SSH public key in this context is necessary.',
+    getMasked: (m) => m.split(' ')[0] + ' ' + '•'.repeat(12) + '...',
+  },
+
+  // === IP ADDRESS ===
+  {
+    id: 'private_ip',
+    category: 'ip_address',
+    label: 'Private IP Address',
+    severity: 'low',
+    confidence: 0.82,
+    pattern: /\b(?:10\.\d{1,3}\.\d{1,3}\.\d{1,3}|172\.(?:1[6-9]|2\d|3[01])\.\d{1,3}\.\d{1,3}|192\.168\.\d{1,3}\.\d{1,3})\b/g,
+    explanation: 'A private network IP address was detected. This may reveal your internal network topology.',
+    recommendation: 'Avoid sharing internal IP addresses to prevent network information leakage.',
+    getMasked: (m) => {
+      const parts = m.split('.');
+      return parts[0] + '.' + parts[1] + '.•••.•••';
+    },
+  },
+
+  // === PHYSICAL ADDRESS ===
+  {
+    id: 'physical_address',
+    category: 'physical_address',
+    label: 'Physical / Street Address',
+    severity: 'medium',
+    confidence: 0.65,
+    pattern: /\b\d{1,5}\s+[A-Z][a-z]+(?:\s+[A-Z][a-z]+)*\s+(?:Street|St|Avenue|Ave|Boulevard|Blvd|Road|Rd|Drive|Dr|Lane|Ln|Court|Ct|Place|Pl|Way|Circle|Cir)\b\.?(?:\s*,\s*(?:Apt|Suite|Ste|Unit|#)\s*\w+)?(?:\s*,\s*[A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)?(?:\s*,\s*[A-Z]{2})?(?:\s+\d{5}(?:-\d{4})?)?/g,
+    explanation: 'A physical street address was detected. This is sensitive location information.',
+    recommendation: 'Avoid sharing your home or work address with AI systems.',
+    getMasked: () => '[ADDRESS — REDACTED]',
+  },
 ];
 
 // ─── Conflict resolution ──────────────────────────────────────────────────────

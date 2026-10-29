@@ -23,6 +23,28 @@ const SEVERITY_COLORS: Record<string, string> = {
   low: '#6b7280',
 };
 
+const CATEGORY_ICONS: Record<string, string> = {
+  api_key: '🔑',
+  private_key: '🗝️',
+  ssh_key: '💻',
+  auth_header: '🛡️',
+  database_credentials: '🗄️',
+  password: '🔒',
+  access_token: '⚡',
+  jwt: '🪙',
+  crypto_wallet: '💰',
+  ssn: '🪪',
+  credit_card: '💳',
+  national_id: '🪪',
+  iban: '🏦',
+  email: '📧',
+  phone: '📱',
+  date_of_birth: '📅',
+  physical_address: '📍',
+  ip_address: '🌐',
+  high_entropy: '🔬',
+};
+
 const SEVERITY_LABELS: Record<string, string> = {
   critical: 'CRITICAL',
   high: 'HIGH',
@@ -159,6 +181,7 @@ export class WarningUI {
     const isSelected = this.selectedIds.has(det.id);
     const color = SEVERITY_COLORS[det.severity] ?? '#6b7280';
     const label = SEVERITY_LABELS[det.severity] ?? det.severity.toUpperCase();
+    const catIcon = CATEGORY_ICONS[det.category] ?? '⚠️';
 
     return `
       <div class="finding-item ${isSelected ? 'finding-selected' : ''}" data-id="${det.id}">
@@ -166,8 +189,9 @@ export class WarningUI {
           <input type="checkbox" class="finding-checkbox" data-id="${det.id}" ${isSelected ? 'checked' : ''} aria-label="Select ${det.label} for redaction" />
           <div class="finding-info">
             <div class="finding-header">
+              <span class="finding-cat-icon">${catIcon}</span>
               <span class="finding-name">${escapeHtml(det.label)}</span>
-              <span class="severity-badge" style="background: ${color}20; color: ${color}; border: 1px solid ${color}40;">${label}</span>
+              <span class="severity-badge" style="background: ${color}18; color: ${color}; border: 1px solid ${color}30;">${label}</span>
             </div>
             <div class="finding-excerpt">${escapeHtml(det.maskedExcerpt)}</div>
             <div class="finding-explanation">${escapeHtml(det.explanation)}</div>
@@ -534,9 +558,14 @@ export class WarningUI {
       .finding-header {
         display: flex;
         align-items: center;
-        gap: 8px;
+        gap: 6px;
         margin-bottom: 4px;
         flex-wrap: wrap;
+      }
+
+      .finding-cat-icon {
+        font-size: 14px;
+        flex-shrink: 0;
       }
 
       .finding-name {

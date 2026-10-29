@@ -12,7 +12,16 @@ export type DetectionCategory =
   | 'database_credentials'
   | 'private_key'
   | 'jwt'
-  | 'high_entropy';
+  | 'high_entropy'
+  | 'ssn'
+  | 'credit_card'
+  | 'crypto_wallet'
+  | 'ip_address'
+  | 'date_of_birth'
+  | 'national_id'
+  | 'physical_address'
+  | 'ssh_key'
+  | 'iban';
 
 export interface Detection {
   id: string;
@@ -118,6 +127,7 @@ export const DEFAULT_SETTINGS: ExtensionSettings = {
   detection: {
     enabled: true,
     categories: {
+      // Existing
       email: true,
       phone: true,
       api_key: true,
@@ -128,6 +138,16 @@ export const DEFAULT_SETTINGS: ExtensionSettings = {
       private_key: true,
       jwt: true,
       high_entropy: false,
+      // New PII categories
+      ssn: true,
+      credit_card: true,
+      crypto_wallet: true,
+      ip_address: false,
+      date_of_birth: true,
+      national_id: true,
+      physical_address: false,
+      ssh_key: true,
+      iban: true,
     },
     sensitivity: 'balanced',
     entropyThreshold: 4.2,

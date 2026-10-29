@@ -22,6 +22,15 @@ const fullSettings: DetectionSettings = {
     private_key: true,
     jwt: true,
     high_entropy: false,
+    ssn: true,
+    credit_card: true,
+    crypto_wallet: true,
+    ip_address: false,
+    date_of_birth: true,
+    national_id: true,
+    physical_address: false,
+    ssh_key: true,
+    iban: true,
   },
 };
 

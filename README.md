@@ -1,155 +1,112 @@
 # PromptGuard 🛡️
 
-> **Your AI prompts. Your privacy. Your control.**  
-> A privacy-first browser extension that intercepts sensitive credentials, secrets, and personal information *before* they are transmitted to AI assistants.
+A privacy-first Chrome extension that detects and intercepts credentials, secrets, and sensitive personal information (PII) in real time **before** they are submitted to AI assistants.
 
 ---
 
-## 🔒 The Mission
+## 📸 Screenshots
 
-As AI assistants like ChatGPT, Claude, Microsoft Copilot, and Google Gemini become integral to development workflows, accidental leakage of API keys, database credentials, passwords, JWTs, and private keys into model training pipelines and remote logs represents a critical threat.
+| Extension Control Panel | Detection Categories |
+| :---: | :---: |
+| ![Extension Popup Main](docs/screenshots/popup-main.jpg) | ![Extension Settings](docs/screenshots/popup-settings.jpg) |
 
-**PromptGuard** acts as an intelligent, zero-latency safety firewall directly inside your browser. It scans text in real time as you compose and intercepts submission events, giving you interactive controls to inspect, mask, redact, or bypass findings safely.
-
----
-
-## ✨ Features
-
-- **100% Local & Zero-Exfiltration**: Prompt detection and redaction happen purely inside the browser runtime. Zero prompt text, token, or secret ever leaves your device or touches an external server.
-- **Pre-Submission Interception**: Intercepts Enter/Cmd+Enter keystrokes, form submissions, and send button clicks across ChatGPT, Claude, Gemini, and Copilot before any network packet is dispatched.
-- **Granular Detection Engine**:
-  - **API Keys**: OpenAI, Anthropic, AWS (AKIA/ASIA), GitHub PATs & Fine-Grained tokens, Google API keys, Stripe, Slack, HuggingFace, generic high-entropy keys.
-  - **Passwords & Secrets**: Environment variable patterns (`PASSWORD=...`, `SECRET=...`), assignment operators, config keys.
-  - **Auth Headers**: Bearer tokens, Basic HTTP auth.
-  - **Database Credentials**: PostgreSQL, MySQL, MongoDB, Redis connection URIs with embedded user/password strings.
-  - **Private Keys**: PEM RSA, EC, DSA, OpenSSH private key blocks.
-  - **Personal Information**: Email addresses, phone numbers, SSNs, credit card numbers.
-  - **Tokens & Signatures**: JSON Web Tokens (JWT), session cookies.
-- **Interactive Shadow DOM Warning Modal**:
-  - Clean, dark glassmorphism modal completely isolated from the host page's CSS and scripts via Shadow DOM.
-  - Category badges, severity indicators (Critical, High, Medium, Low), and masked secret previews (no plaintext display).
-  - **One-Click Redact All**: Replaces all sensitive values with typed placeholders (`[REDACTED_API_KEY]`, `[REDACTED_DATABASE_CREDENTIAL]`).
-  - **Granular Redaction**: Choose which specific findings to redact and which to keep.
-  - **Explicit Consent Bypass**: "Send Anyway" confirmation requiring deliberate user action for intentional sharing.
-  - **Edit In-Place**: Make manual adjustments directly before sending.
-- **Site-Specific Adapters**: Dedicated DOM adapters for ChatGPT, Claude, Gemini, and Copilot with generic fallback for custom AI web tools.
-- **Modern Extension Popup**:
-  - React 19 + TypeScript + CSS Modules dark interface.
-  - Real-time protection status toggle (Global & Per-Site).
-  - Scan history and lifetime threat counter.
-  - Detection sensitivity controls (toggle specific categories).
-  - Local export/reset of privacy settings.
+| Interception in Action (Google Gemini) | Real-Time Warning Modal |
+| :---: | :---: |
+| ![Gemini Detection](docs/screenshots/gemini-detection-demo.jpg) | ![Critical Warning Modal](docs/screenshots/warning-dialog-critical.png) |
 
 ---
 
-## 📁 Architecture
+## ⚡ Key Highlights
 
-```
-PromptGuard/
-├── manifest.json              # Manifest V3 configuration
-├── vite.config.ts             # Vite + CRX build tooling
-├── vitest.config.ts           # Test configuration with jsdom
-├── src/
-│   ├── types/index.ts         # Detection, Redaction & Settings type definitions
-│   ├── engine/
-│   │   ├── detector.ts        # Pure pattern & entropy detection engine
-│   │   └── redactor.ts        # Overlap-safe replacement & masking engine
-│   ├── adapters/
-│   │   ├── chatgpt.ts         # OpenAI ChatGPT adapter
-│   │   ├── claude.ts          # Anthropic Claude adapter
-│   │   ├── gemini.ts          # Google Gemini adapter
-│   │   ├── copilot.ts         # Microsoft Copilot adapter
-│   │   ├── generic.ts         # Universal contenteditable/textarea fallback
-│   │   └── registry.ts        # Adapter registry and active-site matcher
-│   ├── content/
-│   │   ├── index.ts           # Content script entry & event interceptor
-│   │   └── warningUI.ts       # Shadow DOM warning overlay component
-│   ├── background/
-│   │   └── index.ts           # Service worker (tab tracking, stats, storage)
-│   ├── popup/
-│   │   ├── index.html         # Extension popup HTML entry
-│   │   ├── main.tsx           # React root
-│   │   ├── App.tsx            # Full-featured control panel
-│   │   └── App.module.css     # Premium dark theme styling
-│   └── tests/
-│       ├── detector.test.ts   # 38 unit tests for regex & entropy rules
-│       ├── redactor.test.ts   # 18 unit tests for redaction accuracy
-│       └── privacy.test.ts    # 9 unit tests verifying zero exfiltration
-└── icons/                     # Standard extension icons (16, 32, 48, 128)
-```
+- **100% Client-Side Processing**: Zero network transmission of prompt text. All pattern matching and entropy evaluation runs purely inside your browser memory.
+- **Pre-Flight Interception**: Intercepts Enter/Cmd+Enter keypresses and click events on submission buttons before network packets dispatch.
+- **Selective & Full Redaction**: Redact all findings or choose specific items to sanitize with typed tokens (e.g. `[REDACTED_API_KEY]`, `[REDACTED_SSN]`).
+- **Override with Confirmation**: Option to bypass protection for intentional testing via a deliberate confirmation step.
+- **Shadow DOM UI**: Warning modals render inside a closed Shadow DOM, completely immune to parent website styling or script conflicts.
 
 ---
 
-## 🚀 Quick Start (Development & Installation)
+## 🔍 Supported Detection Categories
 
-### 1. Prerequisites
-- Node.js 18+ and npm
+PromptGuard detects **19+ categories** organized across three operational groups:
 
-### 2. Install Dependencies
+### 1. 🔑 Credentials & Tokens (Critical / High)
+* **API Keys**: OpenAI (`sk-...`), GitHub (classic PAT, fine-grained, OAuth), AWS (`AKIA...`), Google Cloud, Stripe, Slack, Twilio, SendGrid.
+* **Cryptographic Keys**: PEM-encoded private keys (RSA, EC, DSA, OpenSSH).
+* **SSH Keys**: OpenSSH private & public keys (`ssh-rsa`, `ssh-ed25519`).
+* **Database URIs**: Connection strings with embedded credentials (PostgreSQL, MySQL, MongoDB, Redis).
+* **HTTP Auth**: `Authorization: Bearer <token>`, `Basic <base64>`, custom token headers.
+* **Secrets & Passwords**: Password assignments, secret keys, tokens.
+* **Tokens**: JSON Web Tokens (JWT).
+* **Crypto Wallets**: Bitcoin (`bc1...`, `1...`, `3...`) & Ethereum (`0x...`).
+
+### 2. 👤 Personal Information & Identity (PII)
+* **Government IDs**: US Social Security Numbers (SSN), Indian Aadhaar (`XXXX XXXX XXXX`), PAN card format, Passport identifiers.
+* **Financial Details**: Credit & Debit Cards (Visa, Mastercard, Amex, Discover, JCB) and International Bank Account Numbers (IBAN).
+* **Contact Information**: Email addresses and international phone numbers.
+* **Personal Data**: Date of Birth (DOB) and physical street addresses.
+
+### 3. 🔬 Advanced Heuristics
+* **Network Topology**: Private IPv4 ranges (`10.x.x.x`, `172.16-31.x.x`, `192.168.x.x`).
+* **Shannon Entropy**: Identifies high-entropy unformatted secret tokens.
+
+---
+
+## 🌐 Supported Platforms
+
+* **ChatGPT** (`chatgpt.com`, `chat.openai.com`)
+* **Anthropic Claude** (`claude.ai`)
+* **Google Gemini** (`gemini.google.com`)
+* **Microsoft Copilot** (`copilot.microsoft.com`)
+* **Universal Generic Adapter**: Optional heuristic fallback for custom AI web tools with explicit user permission.
+
+---
+
+## 🛠️ Installation & Setup
+
+### Prerequisites
+* [Node.js](https://nodejs.org/) (v18 or higher)
+* npm
+
+### Build from Source
 ```bash
+# Clone the repository
+git clone https://github.com/knightrider-GH/Promptguard.git
+cd Promptguard
+
+# Install dependencies
 npm install
-```
 
-### 3. Run Tests
-PromptGuard includes 65 comprehensive unit tests verifying detection coverage, redaction safety, and zero-leakage guarantees:
-```bash
+# Run unit tests (65 tests)
 npm test
-```
 
-### 4. Build the Extension
-```bash
+# Build the extension for production
 npm run build
 ```
-The compiled, production-ready extension will be output to the `dist/` directory.
 
-### 5. Load into Chrome / Edge / Brave
-1. Open your browser and navigate to the extensions page:
-   - Chrome: `chrome://extensions`
-   - Edge: `edge://extensions`
-   - Brave: `brave://extensions`
-2. Enable **Developer mode** (toggle switch in the top-right corner).
+### Load into Chrome / Chromium
+1. Open your browser and navigate to `chrome://extensions/`.
+2. Toggle on **Developer mode** in the top-right corner.
 3. Click **Load unpacked**.
-4. Select the `dist/` directory inside this repository (e.g., `<path-to-promptguard>/dist`).
-5. PromptGuard is now active! The shield icon will appear in your browser toolbar.
+4. Select the `dist/` directory generated inside the `Promptguard` folder.
 
 ---
 
-## 🧪 Testing the Extension
+## 🧪 Testing Prompts
 
-Once loaded into your browser, navigate to any supported AI assistant (e.g., https://chatgpt.com or https://claude.ai):
+You can test PromptGuard's interception in any supported chat interface using these synthetic test examples:
 
-### Test 1: Benign Text (Zero Interruption)
-Type:
+```text
+Config setup:
+DB_URL=postgresql://admin:SecretPass123@db.internal:5432/production
+API_KEY=sk-proj-abc1234567890defghijklmnopqrstuvwxyz123456
+SSN=123-45-6789
+CARD=4111 2222 3333 4444
+CONTACT=alex.smith@example.com or +1 (555) 234-5678
 ```
-How do I implement binary search in Python?
-```
-Press Enter. The prompt submits normally without any modal or delay.
-
-### Test 2: Accidental Secret Leak (Interactive Interception)
-Type:
-```
-Please debug this database error:
-DATABASE_URL=postgres://app_user:SuperSecretPassword123!@db.production.internal:5432/core
-```
-Press Enter or click the Send button.
-
-**Result**:
-- Submission is immediately paused.
-- The PromptGuard warning modal smoothly fades in over the page.
-- The credential is identified with a `Critical` badge.
-- Clicking **Redact All & Send** replaces the secret with `postgres://[REDACTED_DB_CREDENTIALS]@db.production.internal:5432/core` and submits cleanly.
-- Clicking **Send Anyway** prompts for confirmation before allowing the unaltered prompt through.
-
----
-
-## 🛡️ Security & Privacy Architecture
-
-- **No Remote Telemetry**: PromptGuard does not make network requests to analytics servers, external APIs, or logging systems.
-- **Isolated DOM (Shadow Root)**: The warning modal is injected inside an open Shadow Root with encapsulated CSS resets, guaranteeing zero collision with the host page and preventing host scripts from easily accessing warning modal input states.
-- **Safe Masking in UI**: Any identified token is partially masked (e.g. `sk-proj-•••••••••••••`) in both the popup and warning UI so secrets are never displayed in plain view over shoulder-surfers or screen recordings.
 
 ---
 
 ## 📄 License
 
-MIT License. Designed and built with privacy-first engineering principles.
+MIT License. Designed with privacy in mind.
